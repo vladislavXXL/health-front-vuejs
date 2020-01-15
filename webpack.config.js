@@ -58,7 +58,7 @@ let conf = {
             //cache: true,
             //title: 'Health project',
             //favicon: path(__dirname, 'logo.png'),
-            //template: join(__dirname, 'index.html')
+            template: join(__dirname, 'index.html')
         })
     ],
     optimization: {
