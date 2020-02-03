@@ -29,22 +29,19 @@
                 <button class="btn btn-success" @click="isStart = !isStart">Start new game</button>
             </div>
             <div class="col text-center border py-3 shadow-sm p-3 mb-5 bg-white rounded" v-else>
-                <button class="btn ml-3"
-                        v-for="button in buttons"
-                        :class="button.class"
-                        @click="clickButton(button)"
-                >
-                    {{ button.text }}
-                </button>
+                <button class="btn btn-danger ml-2" @click="clickAttack">Attack</button>
+                <button class="btn btn-warning ml-2" @click="clickSpecialAttack">Special Attack</button>
+                <button class="btn btn-success ml-2" @click="clickHeal" :class="{'disabled': this.myHealth >= 100}">Heal</button>
+                <button class="btn btn-outline-dark ml-2" @click="clickGiveUp">Give Up</button>
             </div>
         </div>
-        <div class="row" v-if="log">
-            <div class="col text-center border py-3 shadow-sm p-3 mb-5 bg-white rounded d-flex flex-column-reverse">
+        <div class="row" v-if="gameLogs.length > 0 && monsterHealth < 100">
+            <div class="col text-center border py-3 shadow-sm p-3 mb-5 bg-white rounded">
                 <div class="alert" role="alert"
-                     v-for="(gameLog, index) in gameLogs"
-                     :class="defineLogBg(index)"
+                     v-for="gameLog in gameLogs"
+                     :class="{'alert-success': gameLog.isPlayer, 'alert-danger': !gameLog.isPlayer}"
                 >
-                    {{ gameLog }}
+                    {{ gameLog.text }}
                 </div>
             </div>
         </div>
@@ -54,68 +51,53 @@
 <script>
     import Progress from './Progress.vue';
 
-    function genNum(bound) {
-        return Math.floor(Math.random() * bound) + 1;
-    }
-
     export default {
         name: "App",
         data() {
             return {
                 isStart: false,
-                log: false,
-                buttons: [
-                    {class: 'btn-danger', text: 'Attack'},
-                    {class: 'btn-warning', text: 'Special Attack'},
-                    {class: 'btn-success', text: 'Heal'},
-                    {class: 'btn-outline-dark', text: 'Give Up'},
-                ],
                 myHealth: 100,
                 monsterHealth: 100,
                 gameLogs: []
             }
         },
         methods: {
-            clickButton(button) {
-                if (button.text === 'Heal' && this.myHealth >= 100 && this.monsterHealth >= 100) {
-                    this.log = false;
-                } else {
-                    this.log = true;
+            clickAttack() {
+                let deltaMy = this.genNum(10);
+                let deltaMonster = this.genNum(10);
+                this.myHealth -= deltaMy;
+                if (this.isWin()) {
+                    return;
                 }
-                let deltaMy;
-                let deltaMonster;
-                if (button.text === 'Attack') {
-                    let deltaMy = genNum(10);
-                    let deltaMonster = genNum(10);
-                    this.myHealth -= deltaMy;
-                    this.monsterHealth -= deltaMonster;
-                    this.gameLogs.push('Player hits monster for ' + deltaMonster);
-                    this.gameLogs.push('Monster hits player for ' + deltaMy);
-                } else if (button.text === 'Special Attack') {
-                    deltaMy = genNum(20);
-                    deltaMonster = genNum(20)
-                    this.myHealth -= deltaMy;
-                    this.monsterHealth -= deltaMonster;
-                    this.gameLogs.push('Player hits monster for ' + deltaMonster);
-                    this.gameLogs.push('Monster hits player for ' + deltaMy);
-                } else if (button.text === 'Heal' && this.myHealth < 100) {
-                    deltaMy = genNum(5);
-                    deltaMonster = genNum(2);
+                this.monsterHealth -= deltaMonster;
+                this.gameLogs.unshift({isPlayer: true, text: 'Player hits monster for ' + deltaMonster});
+                this.gameLogs.unshift({isPlayer: false, text: 'Monster hits player for ' + deltaMy});
+                this.isWin();
+            },
+            clickSpecialAttack() {
+                let deltaMy = this.genNum(20);
+                let deltaMonster = this.genNum(20)
+                this.myHealth -= deltaMy;
+                if (this.isWin()) {
+                    return;
+                }
+                this.monsterHealth -= deltaMonster;
+                this.gameLogs.unshift({isPlayer: true, text: 'Player hits monster for ' + deltaMonster});
+                this.gameLogs.unshift({isPlayer: false, text: 'Monster hits player for ' + deltaMy});
+                this.isWin();
+            },
+            clickHeal() {
+                if (this.myHealth < 100) {
+                    let deltaMy = this.genNum(5);
+                    let deltaMonster = this.genNum(2);
                     this.myHealth -= deltaMonster;
                     this.myHealth + deltaMy < 100 ? this.myHealth += deltaMy : this.myHealth = 100;
-                    this.gameLogs.push('Player heals himself for '+ deltaMy);
-                    this.gameLogs.push('Monster hits player for ' + deltaMonster);
-                } else if (button.text === 'Give Up') {
-                    this.clearLogs();
-                }
-                if (this.myHealth <= 0 || this.monsterHealth <= 0) {
-                    let winner = this.myHealth > this.monsterHealth ? 'You' : 'Super Monster';
-                    window.alert(winner +' win. Game finished');
-                    this.clearLogs();
+                    this.gameLogs.unshift({isPlayer: true, text: 'Player heals himself for ' + deltaMy});
+                    this.gameLogs.unshift({isPlayer: false, text: 'Monster hits player for ' + deltaMonster});
                 }
             },
-            defineLogBg(index) {
-                return index % 2 === 0 ? 'alert-success' : 'alert-danger';
+            clickGiveUp() {
+                this.clearLogs();
             },
             clearLogs() {
                 this.isStart = false;
@@ -123,10 +105,23 @@
                 this.monsterHealth = 100;
                 this.log = false;
                 this.gameLogs = [];
+            },
+            genNum(bound) {
+                return Math.floor(Math.random() * bound) + 1;
+            },
+            isWin() {
+                if (this.myHealth <= 0) {
+                    window.alert('You lost!');
+                    this.clearLogs();
+                    return true;
+                } else if (this.monsterHealth <= 0) {
+                    window.alert('You won!');
+                    this.clearLogs();
+                    return true;
+                }
             }
         },
         computed: {
-
         },
         components: {
             AppProgress: Progress
